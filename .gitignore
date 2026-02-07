@@ -1,0 +1,7 @@
+# Local environment variables
+*.env
+
+# Editor config
+.editorconfig
+
+docker/baseline

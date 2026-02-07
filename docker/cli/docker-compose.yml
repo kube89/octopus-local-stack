@@ -1,0 +1,19 @@
+name: octopus-local-stack
+services:
+  cli:
+    container_name: octopus-local-stack-cli
+    image: octopus-local-stack-cli
+    build: .
+    environment:
+      - DOCKER_DEFAULT_PLATFORM=${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
+    volumes:
+      # Mount docker socket to control host docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount project root as workspace
+      - ../../:/workspace
+    working_dir: /workspace
+    # Keep container running for exec, or run one-shot commands
+    stdin_open: true
+    tty: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

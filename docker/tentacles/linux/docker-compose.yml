@@ -1,0 +1,23 @@
+name: octopus-tentacle-${OCTOPUS_TARGET_NAME:-default}
+services:
+  tentacle:
+    build: .
+    container_name: tentacle-${OCTOPUS_TARGET_NAME:-default}
+    environment:
+      ACCEPT_EULA: "Y"
+      ServerUrl: "http://host.docker.internal:8080"
+      ServerPort: "11111"
+      ServerApiKey: ${OCTOPUS_API_KEY}
+      TargetEnvironment: "${OCTOPUS_TARGET_ENVIRONMENT}"
+      TargetRole: "${OCTOPUS_TARGET_ROLE}"
+      TargetWorkerPool: "${OCTOPUS_TARGET_WORKER_POOL}"
+      TargetName: "${OCTOPUS_TARGET_NAME}"
+      Space: "Default"
+      DISABLE_DIND: "Y"
+    volumes:
+      - tentacle-data:/etc/octopus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  tentacle-data:

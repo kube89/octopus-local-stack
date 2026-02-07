@@ -1,0 +1,14 @@
+# Octopus Local Stack Configuration
+
+env:
+  # Database
+  SA_PASSWORD: "Password1234567890!"
+  # Server
+  ADMIN_USERNAME: "admin"
+  ADMIN_PASSWORD: "Password1234567890!"
+  MASTER_KEY: "RkFLRU9DVE9fTUFTVEVSMQ=="
+  # URLs
+  OCTOPUS_URL: "http://localhost:8080"                  # User access (external)
+  OCTOPUS_INTERNAL_URL: "http://host.docker.internal:8080"  # Container-to-server (internal)
+  # API
+  OCTOPUS_API_KEY: "API-2QEHPQU1ZSRZYXZCQ6KVLZOMJRBIJRA"

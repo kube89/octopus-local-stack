@@ -1,0 +1,16 @@
+# Example Tentacle Configuration
+tentacles:
+  - name: "web-server-1"
+    environment: "Test"
+    role: "web"
+    os: "linux"
+
+  - name: "api-server-1"
+    environment: "Test"
+    role: "api"
+    os: "linux"
+
+  - name: "db-worker-1"
+    type: "worker"
+    worker_pool: "Default Worker Pool"
+    os: "linux"

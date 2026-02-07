@@ -1,0 +1,52 @@
+name: octopus-server
+services:
+  db:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    environment:
+      SA_PASSWORD: ${SA_PASSWORD}
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1401:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql
+
+  octopus-server:
+    image: octopusdeploy/octopusdeploy:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      DISABLE_DIND: "Y"
+      DB_CONNECTION_STRING: "Server=db,1433;Database=OctopusDeploy;User ID=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: "you@example.local"
+      OCTOPUS_SERVER_BASE64_LICENSE: ""
+      MASTER_KEY: ${MASTER_KEY}
+      TENTACLE_PASSIVE_ENABLED: "true"
+    ports:
+      - "8080:8080"   # Web portal
+      - "11111:10943" # Polling tentacles endpoint
+      - "8443:8443"   # gRPC
+    depends_on:
+      - db
+    expose:
+      - "10943"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/octopusservernodes/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    volumes:
+      - repository:/repository
+      - artifacts:/artifacts
+      - taskLogs:/taskLogs
+      - cache:/cache
+      - import:/import
+
+volumes:
+  sqlvolume:
+  repository:
+  artifacts:
+  taskLogs:
+  cache:
+  import:
