@@ -38,48 +38,6 @@ This TUI (Text User Interface) allows you to:
 
 ---
 
-## Quick Start (CLI / Automation)
-
-All capabilities are available via scripts for CI/CD or automation.
-
-### 1. Manage Server
-
-```bash
-# Start Server
-./scripts/manage_octopus_server.sh up
-
-# Check Status
-./scripts/manage_octopus_server.sh status
-
-# Stop Server (and deregister all tentacles)
-./scripts/manage_octopus_server.sh down
-```
-
-### 2. Manage Tentacles
-
-```bash
-# Register a single tentacle
-./scripts/manage_tentacles.sh up my-tentacle Test web-server
-
-# Register multiple from config file
-./scripts/manage_tentacles.sh up --config tentacles.yaml --create-env
-
-# Stop a tentacle
-./scripts/manage_tentacles.sh down my-tentacle
-
-# View logs
-./scripts/manage_tentacles.sh logs my-tentacle
-```
-
-### 3. Cleanup
-
-```bash
-# Remove EVERYTHING (containers, volumes, images)
-./scripts/cleanup.sh
-```
-
----
-
 ## Configuration
 
 ### Core Settings
