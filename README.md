@@ -1,6 +1,6 @@
 # Octopus Local Stack
 
-A fully containerized local Octopus Deploy development environment. **Platform agnostic** - only requires Docker.
+A fully containerised local Octopus Deploy development environment. **Platform agnostic** - only requires Docker.
 
 > [!NOTE] 
 > This tool is strictly for **local development and testing**. It acts as a lightweight ephemeral stack and is not intended for production usage or long-lived infrastructure.
@@ -13,7 +13,7 @@ This project operates under the assumption that local Octopus stacks are ephemer
 *   **Tentacles** are treated as disposable tooling for testing and experimentation.
 *   When the server stack is torn down, Tentacles are intentionally removed to maintain a clean state.
 
-This behavior is intentional and sets the expectation that persistent Tentacles are explicitely out of scope.
+This behaviour is intentional and sets the expectation that persistent Tentacles are explicitly out of scope.
 
 ## Prerequisites
 
