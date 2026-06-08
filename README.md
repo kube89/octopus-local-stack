@@ -27,7 +27,7 @@ This behaviour is intentional and sets the expectation that persistent Tentacles
 For the best experience, use the interactive menu:
 
 ```bash
-./scripts/menu.sh
+make menu
 ```
 
 This TUI (Text User Interface) allows you to:
@@ -37,6 +37,18 @@ This TUI (Text User Interface) allows you to:
 - 🧹 **Delete Stack** (Nuke everything)
 
 ---
+
+## Troubleshooting
+
+```
+Error: docker is not running
+make: *** [check-docker] Error 1
+```
+
+#### Apple M4 Pro
+```bash
+colima start --vm-type vz --vz-rosetta --cpu 4 --memory 8 --mount-type virtiofs
+```
 
 ## Configuration
 
