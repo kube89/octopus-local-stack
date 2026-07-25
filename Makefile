@@ -1,18 +1,26 @@
-.PHONY: help up down clean tentacle-up tentacle-down tentacle-clean tentacle-logs cli-build cli-shell create-octopus-environment check-docker
+.PHONY: help up down clean tentacle-up tentacles-up tentacle-down tentacle-clean tentacle-logs cli-build cli-shell shellcheck create-octopus-environment check-docker check-license
 
 # Default target - show help
 .DEFAULT_GOAL := help
 
 # CLI container - --build ensures Dockerfile changes are picked up, layer caching makes it fast
 CLI_RUN = docker compose -f docker/cli/docker-compose.yml run --build --rm cli
+CONFIG ?= tentacles.yaml
 
 # Check Docker is installed and running
 check-docker:
 	@command -v docker >/dev/null 2>&1 || { echo "Error: docker is not installed"; exit 1; }
 	@docker info >/dev/null 2>&1 || { echo "Error: docker is not running"; exit 1; }
 	@docker compose version >/dev/null 2>&1 || { echo "Error: docker compose is not available"; exit 1; }
-	
-menu: check-docker
+
+# Fail before building the CLI image when the server licence is unavailable
+check-license:
+	@if [ -z "$(strip $(OCTOPUS_SERVER_BASE64_LICENSE))" ]; then \
+		echo "Error: OCTOPUS_SERVER_BASE64_LICENSE must be set before starting the stack."; \
+		exit 1; \
+	fi
+
+menu: check-license check-docker
 	@docker compose -f docker/cli/docker-compose.yml build -q cli
 	@echo "Launching Interactive Menu..."
 	@docker compose -f docker/cli/docker-compose.yml run --rm cli ./scripts/menu.sh 2>/dev/null
@@ -31,6 +39,8 @@ help:
 	@echo "Tentacle Commands:"
 	@echo "  tentacle-up                 Start a tentacle"
 	@echo "                              Usage: make tentacle-up NAME=<name> [ENV=<env>] [ROLE=<role>]"
+	@echo "  tentacles-up                Start tentacles from a YAML config"
+	@echo "                              Usage: make tentacles-up [CONFIG=tentacles.yaml]"
 	@echo "  tentacle-down               Stop a tentacle"
 	@echo "  tentacle-clean              Stop tentacle and remove volumes"
 	@echo "  tentacle-logs               Show tentacle logs"
@@ -42,6 +52,7 @@ help:
 	@echo "CLI:"
 	@echo "  cli-shell                   Open shell in CLI container"
 	@echo "  cli-build                   Rebuild CLI container"
+	@echo "  shellcheck                  Lint all shell scripts"
 
 cli-build: check-docker
 	docker compose -f docker/cli/docker-compose.yml build
@@ -49,8 +60,11 @@ cli-build: check-docker
 cli-shell: check-docker
 	$(CLI_RUN)
 
+shellcheck: check-docker
+	$(CLI_RUN) -lc 'find scripts -type f -name "*.sh" -exec shellcheck -x -P SCRIPTDIR {} +'
+
 # Stack commands (via CLI container)
-up: check-docker
+up: check-license check-docker
 	$(CLI_RUN) ./scripts/manage_octopus_server.sh up
 
 down: check-docker
@@ -63,6 +77,10 @@ clean: check-docker
 tentacle-up: check-docker
 	@if [ -z "$(NAME)" ]; then echo "Usage: make tentacle-up NAME=<name> [ENV=<env>] [ROLE=<role>]"; exit 1; fi
 	$(CLI_RUN) ./scripts/manage_tentacles.sh up $(NAME) $(ENV) $(ROLE)
+
+tentacles-up: check-docker
+	@if [ ! -f "$(CONFIG)" ]; then echo "Error: config file not found: $(CONFIG)"; exit 1; fi
+	$(CLI_RUN) ./scripts/manage_tentacles.sh up --config "$(CONFIG)" --create-env
 
 tentacle-down: check-docker
 	$(CLI_RUN) ./scripts/manage_tentacles.sh down $(NAME)

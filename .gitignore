@@ -3,3 +3,5 @@
 
 # Editor config
 .editorconfig
+
+.DS_STORE

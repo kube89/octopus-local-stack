@@ -1,6 +1,6 @@
 # Octopus Local Stack
 
-A fully containerised local Octopus Deploy development environment. **Platform agnostic** - only requires Docker.
+A fully containerised local Octopus Deploy development environment. Requires Docker with Compose v2 and Make. All other tooling is provided by the CLI container.
 
 > [!NOTE] 
 > This tool is strictly for **local development and testing**. It acts as a lightweight ephemeral stack and is not intended for production usage or long-lived infrastructure.
@@ -15,9 +15,15 @@ This project operates under the assumption that local Octopus stacks are ephemer
 
 This behaviour is intentional and sets the expectation that persistent Tentacles are explicitly out of scope.
 
+### Data Lifecycle
+
+- `make down` stops the server and database, removes Tentacles, and preserves server data in Docker volumes.
+- `make clean` removes all stack containers and volumes, including stored server data.
+
 ## Prerequisites
 
 - **Docker** (with Docker Compose v2)
+- **Make**
 - **Linux** or **macOS** (Windows support on roadmap)
 
 ---
@@ -44,16 +50,21 @@ This TUI (Text User Interface) allows you to:
 Error: docker is not running
 make: *** [check-docker] Error 1
 ```
-
-#### Apple M4 Pro
-```bash
-colima start --vm-type vz --vz-rosetta --cpu 4 --memory 8 --mount-type virtiofs
-```
+Make sure Docker is running.
 
 ## Configuration
 
 ### Core Settings
 `octopus-local-stack.yaml` contains the admin credentials, ports, and default API key.
+
+An Octopus Server licence is required. Export the base64-encoded licence before starting the stack:
+
+```bash
+export OCTOPUS_SERVER_BASE64_LICENSE="<base64-encoded-licence>"
+make menu
+```
+
+Startup stops with an error if `OCTOPUS_SERVER_BASE64_LICENSE` is unset or empty.
 
 ### Tentacles Configuration
 You can define a batch of tentacles in `tentacles.yaml`:
@@ -67,7 +78,10 @@ tentacles:
 ```
 
 Then apply it with:
-`./scripts/manage_tentacles.sh up --config tentacles.yaml --create-env`
+
+```bash
+make tentacles-up CONFIG=tentacles.yaml
+```
 
 ---
 

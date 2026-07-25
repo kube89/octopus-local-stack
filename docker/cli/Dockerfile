@@ -7,6 +7,7 @@ RUN apk add --no-cache \
     bash \
     curl \
     jq \
+    shellcheck \
     docker-cli \
     docker-cli-compose \
     gum \

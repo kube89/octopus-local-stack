@@ -218,8 +218,8 @@ fi
 
 case "$COMMAND" in
   up)
-    check_dependencies
-    load_config
+    check_dependencies || exit 1
+    load_config || exit 1
     start_server
     ;;
   down)

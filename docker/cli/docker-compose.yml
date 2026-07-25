@@ -6,6 +6,7 @@ services:
     build: .
     environment:
       - DOCKER_DEFAULT_PLATFORM=${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
+      - OCTOPUS_SERVER_BASE64_LICENSE=${OCTOPUS_SERVER_BASE64_LICENSE:-}
     volumes:
       # Mount docker socket to control host docker
       - /var/run/docker.sock:/var/run/docker.sock

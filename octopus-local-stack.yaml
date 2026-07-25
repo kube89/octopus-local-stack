@@ -1,14 +1,27 @@
 # Octopus Local Stack Configuration
+#
+# SECURITY NOTICE
+# These are deliberately fixed, non-secret credentials for disposable local
+# development stacks. They are committed for convenience and must never be:
+#   - reused outside this project
+#   - used for production or shared environments
+#   - treated as secure secrets
 
 env:
-  # Database
+  # Known development-only SQL administrator password.
   SA_PASSWORD: "Password1234567890!"
-  # Server
+
+  # Known development-only Octopus administrator credentials.
   ADMIN_USERNAME: "admin"
   ADMIN_PASSWORD: "Password1234567890!"
+
+  # Fixed development key for disposable encrypted data.
+  # It provides repeatable startup, not production-grade secrecy.
   MASTER_KEY: "RkFLRU9DVE9fTUFTVEVSMQ=="
-  # URLs
-  OCTOPUS_URL: "http://localhost:8080"                  # User access (external)
-  OCTOPUS_INTERNAL_URL: "http://host.docker.internal:8080"  # Container-to-server (internal)
-  # API
+
+  # Host and container access endpoints.
+  OCTOPUS_URL: "http://localhost:8080"
+  OCTOPUS_INTERNAL_URL: "http://host.docker.internal:8080"
+
+  # Predetermined development API key seeded into the local database.
   OCTOPUS_API_KEY: "API-2QEHPQU1ZSRZYXZCQ6KVLZOMJRBIJRA"
