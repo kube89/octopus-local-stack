@@ -1,10 +1,11 @@
-.PHONY: help up down clean tentacle-up tentacles-up tentacle-down tentacle-clean tentacle-logs cli-build cli-shell shellcheck create-octopus-environment check-docker check-license
+.PHONY: help up down clean connection-json tentacle-up tentacles-up tentacle-down tentacle-clean tentacle-logs cli-build cli-shell shellcheck create-octopus-environment check-docker check-license
 
 # Default target - show help
 .DEFAULT_GOAL := help
 
 # CLI container - --build ensures Dockerfile changes are picked up, layer caching makes it fast
 CLI_RUN = docker compose -f docker/cli/docker-compose.yml run --build --rm cli
+CLI_RUN_NO_BUILD = docker compose -f docker/cli/docker-compose.yml run --rm -T cli
 CONFIG ?= tentacles.yaml
 
 # Check Docker is installed and running
@@ -31,9 +32,10 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Stack Commands:"
-	@echo "  up                          Start Octopus Server and create API key"
+	@echo "  up                          Start Octopus Server and provision API key"
 	@echo "  down                        Stop the stack (keep volumes)"
 	@echo "  clean                       Stop and remove all volumes"
+	@echo "  connection-json             Print the validated consumer contract"
 
 	@echo ""
 	@echo "Tentacle Commands:"
@@ -72,6 +74,9 @@ down: check-docker
 
 clean: check-docker
 	$(CLI_RUN) ./scripts/cleanup.sh
+
+connection-json: check-docker
+	@$(CLI_RUN_NO_BUILD) ./scripts/connection_json.sh </dev/null
 
 # Tentacle commands (via CLI container)
 tentacle-up: check-docker

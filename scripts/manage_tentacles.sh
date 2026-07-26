@@ -8,7 +8,8 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/docker/compose.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/octopus/api.sh"
-load_config
+load_config || exit 1
+load_runtime_state || exit 1
 
 TENTACLE_OS="linux"
 
@@ -194,7 +195,7 @@ function start_tentacle {
     if ! docker compose up -d --build tentacle 2>&1; then
         echo ""
         echo_red "ERROR: Failed to start $name"
-        popd >/dev/null
+        popd >/dev/null || return 1
         return 1
     fi
     
@@ -203,7 +204,7 @@ function start_tentacle {
     if ! wait_for_container "$container_name"; then
         echo ""
         echo_red "ERROR: $name failed to start"
-        popd >/dev/null
+        popd >/dev/null || return 1
         return 1
     fi
     
@@ -212,6 +213,9 @@ function start_tentacle {
 
 function stop_tentacle {
     local name="$1"
+    local machines_json
+    local workers_json
+    local id
     
     echo "--- Stopping Tentacle${name:+: $name} ---"
     pushd "$TENTACLE_DIR" >/dev/null || return 1
@@ -219,15 +223,15 @@ function stop_tentacle {
     if [ -n "$name" ]; then
         # Deregister first
         # Try finding in Machines (Targets)
-        local machines_json=$(list_machines 2>/dev/null)
-        local id=$(echo "$machines_json" | jq -r ".[] | select(.Name == \"$name\") | .Id")
+        machines_json=$(list_machines 2>/dev/null)
+        id=$(echo "$machines_json" | jq -r ".[] | select(.Name == \"$name\") | .Id")
         
         if [ -n "$id" ] && [ "$id" != "null" ]; then
              echo "Deregistering Deployment Target $name ($id)..."
              delete_machine "$id"
         else
              # Try finding in Workers
-             local workers_json=$(list_workers 2>/dev/null)
+             workers_json=$(list_workers 2>/dev/null)
              id=$(echo "$workers_json" | jq -r ".[] | select(.Name == \"$name\") | .Id")
              
              if [ -n "$id" ] && [ "$id" != "null" ]; then
@@ -249,11 +253,14 @@ function stop_tentacle {
 }
 
 function delete_all {
+    local ids
+    local name
+
     # Deregister Deployment Targets
     if machines=$(list_machines 2>/dev/null); then
-        local ids=$(echo "$machines" | jq -r '.[].Id')
+        ids=$(echo "$machines" | jq -r '.[].Id')
         for id in $ids; do
-            local name=$(echo "$machines" | jq -r ".[] | select(.Id==\"$id\") | .Name")
+            name=$(echo "$machines" | jq -r ".[] | select(.Id==\"$id\") | .Name")
             echo "Deregistering Deployment Target: $name ($id)"
             delete_machine "$id" || echo_yellow "Warning: Failed to deregister $name"
         done
@@ -261,9 +268,9 @@ function delete_all {
 
     # Deregister Workers
     if workers=$(list_workers 2>/dev/null); then
-        local ids=$(echo "$workers" | jq -r '.[].Id')
+        ids=$(echo "$workers" | jq -r '.[].Id')
         for id in $ids; do
-             local name=$(echo "$workers" | jq -r ".[] | select(.Id==\"$id\") | .Name")
+             name=$(echo "$workers" | jq -r ".[] | select(.Id==\"$id\") | .Name")
              echo "Deregistering Worker: $name ($id)"
              delete_worker "$id" || echo_yellow "Warning: Failed to deregister $name"
         done

@@ -23,19 +23,18 @@ EOF
 # Check for registered tentacles and log status
 function show_status {
 	echo "Checking status..."
-    # Validate API Key before showing status
-    # If the server is up but key invalid, recreate it.
+    # Validate the startup-provisioned API key before showing status.
     if is_service_running "octopus-server"; then
         if ! is_api_key_valid; then
-             echo_yellow "API Key invalid or expired. Refreshing..."
-             bash "$SCRIPT_DIR/octopus/create_api_key.sh" >/dev/null
+            echo_red "Error: The generated Octopus API key is not valid."
+            echo_red "Run 'make clean' to recreate this disposable stack and its credentials."
+            return 1
         fi
     fi
 
     # Display Server Status Box
-    # Display Server Status Box
 	local box_width=60
-	local label_width=10
+	local label_width=12
 	local value_width=$((box_width - label_width - 4))
 	print_box_row() { printf "\033[0;33m║  %-${label_width}s %-${value_width}s ║\033[0m\n" "$1" "$2"; }
 	
@@ -45,24 +44,25 @@ function show_status {
 	echo_yellow "╠$(printf '═%.0s' $(seq 1 $box_width))╣"
 	print_box_row "URL:" "$OCTOPUS_URL"
 	print_box_row "Username:" "$ADMIN_USERNAME"
-	print_box_row "Password:" "$ADMIN_PASSWORD"
-	print_box_row "API Key:" "$OCTOPUS_API_KEY"
+	print_box_row "Credentials:" "available via make connection-json"
 	echo_yellow "╚$(printf '═%.0s' $(seq 1 $box_width))╝"
 	echo ""
 
     local machines
     local workers
     local count=0
+    local m_count=0
+    local w_count=0
     
     # 1. Deployment Targets
     if machines=$(list_machines 2>/dev/null); then
-        local m_count=$(echo "$machines" | jq length)
+        m_count=$(echo "$machines" | jq length)
         count=$((count + m_count))
     fi
 
     # 2. Workers
     if workers=$(list_workers 2>/dev/null); then
-         local w_count=$(echo "$workers" | jq length)
+         w_count=$(echo "$workers" | jq length)
          count=$((count + w_count))
     fi
     
@@ -86,24 +86,27 @@ function show_status {
 }
 
 function stop_server {
+    local ids
+    local name
+
     pushd "$PROJECT_DIR/docker/octopus-server" >/dev/null || return 1
 	echo "Stopping Octopus Server stack..."
 
     # Deregister all tentacles via API first
     echo "Deregistering all tentacles..."
     if machines=$(list_machines 2>/dev/null); then
-        local ids=$(echo "$machines" | jq -r '.[].Id')
+        ids=$(echo "$machines" | jq -r '.[].Id')
         for id in $ids; do
-            local name=$(echo "$machines" | jq -r ".[] | select(.Id==\"$id\") | .Name")
+            name=$(echo "$machines" | jq -r ".[] | select(.Id==\"$id\") | .Name")
             echo "  Removing Deployment Target: $name ($id)"
             delete_machine "$id" || echo_yellow "  Warning: Failed to delete $id"
         done
     fi
     # Also workers
     if workers=$(list_workers 2>/dev/null); then
-        local ids=$(echo "$workers" | jq -r '.[].Id')
+        ids=$(echo "$workers" | jq -r '.[].Id')
         for id in $ids; do
-             local name=$(echo "$workers" | jq -r ".[] | select(.Id==\"$id\") | .Name")
+             name=$(echo "$workers" | jq -r ".[] | select(.Id==\"$id\") | .Name")
              echo "  Removing Worker: $name ($id)"
              delete_worker "$id" || echo_yellow "  Warning: Failed to delete $id"
         done
@@ -119,20 +122,29 @@ function stop_server {
 }
 
 function start_server {
+    local db_container
+    local web_container
+
     pushd "$PROJECT_DIR/docker/octopus-server" >/dev/null || return 1
 
 	# Check if octopus server is already running
     if is_service_running "octopus-server"; then
-		echo_green "Octopus Server is already running."
+        echo_green "Octopus Server is already running."
         show_status
-		popd >/dev/null
+		popd >/dev/null || return 1
 		return 0
 	fi
 
     echo "Starting Octopus Server..."
-    check_ports_available || return 1
+    if ! check_ports_available; then
+        popd >/dev/null || return 1
+        return 1
+    fi
     
-	docker compose up -d db octopus-server
+    if ! docker compose up -d db octopus-server; then
+        popd >/dev/null || return 1
+        return 1
+    fi
     
     # Monitor startup - wait for API or early exit on container failure
     echo "Waiting for Octopus Server to be ready (this may take a few minutes)..."
@@ -152,8 +164,8 @@ function start_server {
             echo_red "Error: Octopus Server or Database container stopped unexpectedly!"
             
             # Show logs for diagnosis
-            local db_container=$(get_container_name "db")
-            local web_container=$(get_container_name "octopus-server")
+            db_container=$(get_container_name "db")
+            web_container=$(get_container_name "octopus-server")
             
             if [ -n "$db_container" ]; then
                 echo_yellow "--- Logs for $db_container ---"
@@ -165,7 +177,7 @@ function start_server {
                 docker logs "$web_container" 2>&1 | tail -n 20
             fi
             
-            popd >/dev/null
+            popd >/dev/null || return 1
             return 1
         fi
         
@@ -173,7 +185,7 @@ function start_server {
         if (( SECONDS - start_time > timeout )); then
             echo ""
             echo_red "Timeout waiting for Octopus API"
-            popd >/dev/null
+            popd >/dev/null || return 1
             return 1
         fi
         
@@ -181,10 +193,19 @@ function start_server {
         sleep 5
     done
     
-    # Create API Key
-    bash "$SCRIPT_DIR/octopus/create_api_key.sh"
+    echo "Validating startup-provisioned API key..."
+    if ! retry_curl curl -fsS -o /dev/null \
+        -H "X-Octopus-ApiKey: $OCTOPUS_API_KEY" \
+        "${OCTOPUS_INTERNAL_URL%/}/api/users/me"; then
+        echo_red "Error: Octopus did not accept the generated API key."
+        popd >/dev/null || return 1
+        return 1
+    fi
 
-    show_status
+    show_status || {
+        popd >/dev/null || return 1
+        return 1
+    }
     popd >/dev/null || return 1
 }
 
@@ -220,16 +241,19 @@ case "$COMMAND" in
   up)
     check_dependencies || exit 1
     load_config || exit 1
-    start_server
+    ensure_runtime_state || exit 1
+    start_server || exit 1
     ;;
   down)
-    check_dependencies
-    load_config
-    stop_server
+    check_dependencies || exit 1
+    load_config || exit 1
+    load_runtime_state || exit 1
+    stop_server || exit 1
     ;;
   status)
-    check_dependencies
-    load_config
+    check_dependencies || exit 1
+    load_config || exit 1
+    load_runtime_state || exit 1
     # Show connection info if up - READ ONLY CHECK
     if is_service_running "octopus-server"; then
         show_status

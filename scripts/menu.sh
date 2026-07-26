@@ -1,6 +1,6 @@
 #!/bin/bash
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-load_config
+load_config || exit 1
 source "$(dirname "${BASH_SOURCE[0]}")/octopus/api.sh"
 
 # Set GUM_SPIN_SPINNER to dot to avoid issues in some terminals
@@ -38,6 +38,10 @@ while true; do
       fi
       ;;
     "🐙 Manage Tentacles")
+      if ! load_runtime_state; then
+          echo_red "Start the stack before managing tentacles."
+          continue
+      fi
       SUB_CHOICE=$(gum choose "➕ Add Tentacle" "📄 Add from Config File" "➖ Remove Tentacle" "🗑️ Remove All Tentacles" "📝 View Logs" "🔙 Back")
       
       case "$SUB_CHOICE" in

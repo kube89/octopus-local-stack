@@ -6,7 +6,8 @@
 # Source common functions
 source "$(dirname "${BASH_SOURCE[0]}")/../common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/api.sh"
-load_config
+load_config || exit 1
+load_runtime_state || exit 1
 
 NAME="${1:-}"
 DESCRIPTION="${2:-}"

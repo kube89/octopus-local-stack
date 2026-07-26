@@ -46,7 +46,7 @@ wait_for_health() {
     local elapsed=0
     
     echo -n "Waiting for $container to be healthy"
-    while [ $elapsed -lt $timeout ]; do
+    while [ "$elapsed" -lt "$timeout" ]; do
         local health
         health=$(docker inspect --format '{{.State.Health.Status}}' "$container" 2>/dev/null)
         

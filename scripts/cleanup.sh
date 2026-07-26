@@ -4,7 +4,6 @@
 # Only cleans octopus-server and octopus-tentacle - no side effects on other docker setups
 
 # Source common functions
-# Source common functions
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 echo ""
@@ -15,7 +14,7 @@ function remove_server_stack {
     echo "--- Removing Octopus Server ---"
     pushd "$PROJECT_DIR/docker/octopus-server" >/dev/null 2>&1 && {
         docker compose down --volumes --remove-orphans 2>/dev/null || true
-        popd >/dev/null
+        popd >/dev/null || return 1
     }
 
     # Also catch any orphaned octopus-server containers
@@ -36,7 +35,7 @@ function remove_tentacles {
         if [ -d "$os_dir" ]; then
             pushd "$os_dir" >/dev/null 2>&1 && {
                 docker compose down --volumes --remove-orphans 2>/dev/null || true
-                popd >/dev/null
+                popd >/dev/null || return 1
             }
         fi
     done
@@ -54,48 +53,29 @@ function remove_volumes {
     echo ""
     echo "--- Removing Volumes ---"
 
-    # Octopus server volumes
-    for pattern in "octopus-server_" "sqlvolume" "repository" "artifacts" "taskLogs" "cache" "import"; do
-        docker volume ls -q --filter "name=$pattern" 2>/dev/null | while read -r vol; do
+    for vol in \
+        octopus-server_artifacts \
+        octopus-server_cache \
+        octopus-server_import \
+        octopus-server_repository \
+        octopus-server_sqlvolume \
+        octopus-server_taskLogs; do
+        if docker volume inspect "$vol" >/dev/null 2>&1; then
             echo "  Removing volume: $vol"
             docker volume rm "$vol" 2>/dev/null || true
-        done
-    done
-
-    # Tentacle volumes
-    docker volume ls -q --filter "name=tentacle" 2>/dev/null | while read -r vol; do
-        echo "  Removing volume: $vol"
-        docker volume rm "$vol" 2>/dev/null || true
-    done
-
-    echo_green "✓ Volumes cleaned"
-}
-
-function remove_images {
-    echo ""
-    echo "--- Removing Images ---"
-
-    # Remove built images (cli, tentacle)
-    for pattern in "octopus-local-stack" "octopus-tentacle"; do
-        docker images --format "{{.Repository}}:{{.Tag}}" | grep "$pattern" | while read -r img; do
-            echo "  Removing image: $img"
-            docker rmi "$img" 2>/dev/null || true
-        done
-    done
-
-    # Remove base images (optional - they take time to re-download)
-    for img in "octopusdeploy/octopusdeploy:latest" "octopusdeploy/tentacle:latest" "mcr.microsoft.com/mssql/server:latest"; do
-        if docker images -q "$img" 2>/dev/null | grep -q .; then
-            echo "  Removing base image: $img"
-            docker rmi "$img" 2>/dev/null || true
         fi
     done
 
-    # Prune dangling images
-    echo "  Pruning dangling images..."
-    docker image prune -f 2>/dev/null || true
+    docker volume ls --format '{{.Name}}' 2>/dev/null | while read -r vol; do
+        case "$vol" in
+            octopus-tentacle-*_tentacle-data)
+                echo "  Removing volume: $vol"
+                docker volume rm "$vol" 2>/dev/null || true
+                ;;
+        esac
+    done
 
-    echo_green "✓ Images cleaned"
+    echo_green "✓ Volumes cleaned"
 }
 
 function remove_networks {
@@ -144,7 +124,7 @@ function print_summary {
     if [ -z "$networks" ]; then
         echo "  (none)"
     else
-        echo "$networks" | sed 's/^/  /'
+        printf '%s\n' "$networks" | awk '{ print "  " $0 }'
     fi
 }
 
@@ -152,6 +132,13 @@ function print_summary {
 remove_server_stack
 remove_tentacles
 remove_volumes
-remove_images
 remove_networks
+
+if server_data_volumes_exist; then
+    echo_red "Error: Server data volumes remain, so generated credentials were preserved."
+    print_summary
+    exit 1
+fi
+
+clear_runtime_state || exit 1
 print_summary

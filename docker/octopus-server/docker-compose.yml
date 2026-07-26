@@ -18,6 +18,7 @@ services:
       DB_CONNECTION_STRING: "Server=db,1433;Database=OctopusDeploy;User ID=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_API_KEY: ${OCTOPUS_API_KEY}
       ADMIN_EMAIL: "you@example.local"
       OCTOPUS_SERVER_BASE64_LICENSE: ${OCTOPUS_SERVER_BASE64_LICENSE:?OCTOPUS_SERVER_BASE64_LICENSE must be set}
       MASTER_KEY: ${MASTER_KEY}
