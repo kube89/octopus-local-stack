@@ -25,12 +25,13 @@ This behaviour is intentional and sets the expectation that persistent Tentacles
 - **Docker** (with Docker Compose v2)
 - **Make**
 - **Linux** or **macOS** (Windows support on roadmap)
+- **Octopus Server licence** — required to start the stack; see [Providing the licence](#providing-the-licence).
 
 ---
 
 ## Quick Start (Interactive)
 
-For the best experience, use the interactive menu:
+After [providing the licence](#providing-the-licence), use the interactive menu:
 
 ```bash
 make menu
@@ -54,17 +55,30 @@ Make sure Docker is running.
 
 ## Configuration
 
-### Core Settings
-`octopus-local-stack.yaml` contains non-secret stack settings such as endpoints, account names, and resource identifiers.
+### Providing the licence
 
-An Octopus Server licence is required. Export the base64-encoded licence before starting the stack:
+Export your base64-encoded Octopus Server licence as `OCTOPUS_SERVER_BASE64_LICENSE` in the terminal where you will start the stack. Replace the placeholder with your licence value:
 
 ```bash
 export OCTOPUS_SERVER_BASE64_LICENSE="<base64-encoded-licence>"
 make menu
 ```
 
-Startup stops with an error if `OCTOPUS_SERVER_BASE64_LICENSE` is unset or empty.
+You can also run `make up` from the same terminal to start the stack without the menu. The stack passes the environment variable through the CLI container to Octopus Server; no configuration file changes are needed. Export it again when using a new terminal session.
+
+Startup stops with an error if `OCTOPUS_SERVER_BASE64_LICENSE` is unset or empty. Keep the licence out of this repository.
+
+### Core Settings
+`octopus-local-stack.yaml` contains non-secret stack settings such as endpoints, account names, and resource identifiers.
+
+The Server image defaults to `octopusdeploy/octopusdeploy:latest`. A consumer may pin another published image without changing the stack:
+
+```bash
+export OCTOPUS_SERVER_IMAGE="octopusdeploy/octopusdeploy:<tag>"
+make up
+```
+
+The override is passed through the CLI helper container to the Server Compose project. Use `make clean` before changing to a different release stream or a public-preview image so the disposable environment starts with a fresh database.
 
 The stack generates its SQL password, Octopus administrator password, API key, master key, and instance ID on first startup. The API key is provisioned through Octopus Server's native `ADMIN_API_KEY` container setting. These values are stored in a dedicated Docker volume rather than in this repository. The master key remains internal to the provider.
 

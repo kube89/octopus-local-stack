@@ -11,7 +11,7 @@ services:
       - sqlvolume:/var/opt/mssql
 
   octopus-server:
-    image: octopusdeploy/octopusdeploy:latest
+    image: ${OCTOPUS_SERVER_IMAGE:-octopusdeploy/octopusdeploy:latest}
     environment:
       ACCEPT_EULA: "Y"
       DISABLE_DIND: "Y"
